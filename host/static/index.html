@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>ServiceNow MCP Host</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .section {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        input,
+        textarea,
+        select {
+
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            margin-bottom: 15px;
+
+            box-sizing: border-box;
+
+            border: 1px solid #ccc;
+            border-radius: 5px;
+
+            font-size: 14px;
+        }
+
+        textarea {
+            height: 120px;
+            font-family: monospace;
+        }
+
+        button {
+
+            padding: 10px 20px;
+
+            border: none;
+            border-radius: 5px;
+
+            cursor: pointer;
+
+            font-size: 14px;
+        }
+
+        .connect {
+            background: #222;
+            color: white;
+        }
+
+        .execute {
+            background: #0066cc;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        .tool {
+
+            padding: 10px;
+
+            margin-top: 8px;
+
+            border: 1px solid #ddd;
+
+            border-radius: 5px;
+
+            cursor: pointer;
+        }
+
+        .tool:hover {
+            background: #f5f5f5;
+        }
+
+        pre {
+
+            background: #f4f4f4;
+
+            padding: 15px;
+
+            border-radius: 5px;
+
+            overflow-x: auto;
+        }
+
+        #status {
+
+            margin-top: 15px;
+
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<h1>ServiceNow MCP Host</h1>
+
+<p>
+    Connect to an MCP Server using Streamable HTTP.
+</p>
+
+
+<!-- =====================================================
+     SERVER CONNECTION
+====================================================== -->
+
+<div class="section">
+
+    <h2>1. MCP Server</h2>
+
+    <label>
+        MCP Server URL
+    </label>
+
+    <input
+        id="serverUrl"
+        value="http://127.0.0.1:8000/mcp"
+    >
+
+    <button
+        class="connect"
+        onclick="connectToServer()"
+    >
+        Connect & Discover Tools
+    </button>
+
+    <div id="status"></div>
+
+</div>
+
+
+<!-- =====================================================
+     TOOLS
+====================================================== -->
+
+<div class="section">
+
+    <h2>2. Available Tools</h2>
+
+    <div id="tools">
+        No tools discovered yet.
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     TOOL EXECUTION
+====================================================== -->
+
+<div class="section">
+
+    <h2>3. Execute Tool</h2>
+
+    <label>
+        Tool Name
+    </label>
+
+    <input
+        id="toolName"
+        placeholder="Example: search_incidents"
+    >
+
+
+    <label>
+        Arguments (JSON)
+    </label>
+
+    <textarea
+        id="arguments"
+    >{
+    "query": "wifi",
+    "limit": 5
+}</textarea>
+
+
+    <button
+        class="execute"
+        onclick="executeTool()"
+    >
+        Execute Tool
+    </button>
+
+</div>
+
+
+<!-- =====================================================
+     RESULT
+====================================================== -->
+
+<div class="section">
+
+    <h2>4. Result</h2>
+
+    <pre id="result">
+No result yet.
+    </pre>
+
+</div>
+
+
+<script>
+
+
+// ---------------------------------------------------------
+// Connect to MCP server
+// ---------------------------------------------------------
+
+async function connectToServer() {
+
+    const serverUrl =
+        document.getElementById("serverUrl").value;
+
+
+    const status =
+        document.getElementById("status");
+
+
+    const toolsDiv =
+        document.getElementById("tools");
+
+
+    status.innerText =
+        "Connecting...";
+
+
+    try {
+
+        const formData =
+            new FormData();
+
+        formData.append(
+            "server_url",
+            serverUrl
+        );
+
+
+        const response =
+            await fetch(
+                "/tools",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.success) {
+
+            status.innerText =
+                "Connection failed.";
+
+            return;
+        }
+
+
+        status.innerText =
+            "Connected successfully!";
+
+
+        toolsDiv.innerHTML = "";
+
+
+        data.tools.forEach(tool => {
+
+            const div =
+                document.createElement("div");
+
+
+            div.className =
+                "tool";
+
+
+            div.innerHTML =
+                `<strong>${tool.name}</strong>
+                 <br>
+                 ${tool.description || ""}`;
+
+
+            div.onclick =
+                () => {
+
+                    document.getElementById(
+                        "toolName"
+                    ).value = tool.name;
+
+                };
+
+
+            toolsDiv.appendChild(div);
+
+        });
+
+    }
+
+    catch (error) {
+
+        status.innerText =
+            "Error: " + error;
+
+    }
+
+}
+
+
+// ---------------------------------------------------------
+// Execute MCP tool
+// ---------------------------------------------------------
+
+async function executeTool() {
+
+    const serverUrl =
+        document.getElementById(
+            "serverUrl"
+        ).value;
+
+
+    const toolName =
+        document.getElementById(
+            "toolName"
+        ).value;
+
+
+    const argumentsText =
+        document.getElementById(
+            "arguments"
+        ).value;
+
+
+    const resultBox =
+        document.getElementById(
+            "result"
+        );
+
+
+    resultBox.innerText =
+        "Executing...";
+
+
+    try {
+
+        const formData =
+            new FormData();
+
+
+        formData.append(
+            "server_url",
+            serverUrl
+        );
+
+
+        formData.append(
+            "tool_name",
+            toolName
+        );
+
+
+        formData.append(
+            "arguments",
+            argumentsText
+        );
+
+
+        const response =
+            await fetch(
+                "/call",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        resultBox.innerText =
+            JSON.stringify(
+                data,
+                null,
+                2
+            );
+
+    }
+
+    catch (error) {
+
+        resultBox.innerText =
+            "Error: " + error;
+
+    }
+
+}
+
+
+</script>
+
+
+</body>
+
+</html>
+

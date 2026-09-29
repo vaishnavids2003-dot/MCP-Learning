@@ -1,0 +1,9 @@
+mcp[cli]
+fastapi
+uvicorn[standard]
+httpx
+python-dotenv
+fastmcp
+mcp
+mcp.client.streamable_http
+aiohttp
